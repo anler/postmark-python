@@ -2,15 +2,21 @@ import os
 import urllib2
 import json
 import base64
+import mimetypes
 import logging
 
 POSTMARK_URL = "%(scheme)s://api.postmarkapp.com/email"
 
 logger = logging.getLogger("postmark")
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.NullHandler())
+
 
 class Postmark(object):
-    def __init__(self, api_key, use_ssl=True):
-        if use_ssl:
+
+    def __init__(self, api_key, request_factory=None, url_opener=None,
+                 request_handlers=None, secure=True):
+        if secure:
             scheme = "https"
         else:
             scheme = "http"
@@ -21,16 +27,32 @@ class Postmark(object):
             "Content-type": "application/json",
             "X-Postmark-Server-Token": api_key
         }
-        self.request = urllib2.Request(url, headers=default_headers)
+        if not request_factory:
+            request_factory = urllib2.Request
+        if not url_opener:
+            if request_handlers:
+                url_opener = urllib2.build_opener(request_handlers)
+            else:
+                url_opener = urllib2.build_opener()
+        self.opener = url_opener
+        self.request = request_factory(url, headers=default_headers)
 
     def sendmail(self, msg):
-        self.request.add_data(msg.as_string())
-        try:
-            response = urllib2.urlopen(self.request).read()
-        except urllib2.URLError, e:
-            response = e.read()
+        response_dict = json.load(self._send_request(msg))
+        logger.info("Received response %r" % response_dict)
 
-        return json.loads(response)
+        return response_dict
+
+    def _send_request(self, msg):
+        msg_str = msg.as_string()
+        logger.info("Sending message %r" % msg_str)
+        self.request.add_data(msg_str)
+        try:
+            response = self.opener.open(self.request)
+        except urllib2.URLError, e:
+            response = e
+
+        return response
 
 
 class Message(object):

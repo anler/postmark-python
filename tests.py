@@ -1,12 +1,31 @@
 import os
 import json
+import urllib2
 import unittest
+
+from pyDoubles.framework import spy, assert_that_method
 
 import postmark
 
 
 class PostmarkTest(unittest.TestCase):
-    pass
+
+    api_key = "dummy"
+
+    def test_sendmail(self):
+        def request_factory(*args, **kwargs):
+            return spy(urllib2.Request(*args, **kwargs))
+        class dummyopener(object):
+            def open(self, request):
+                pass
+        opener = spy(dummyopener())
+        p = postmark.Postmark(self.api_key, request_factory, opener)
+        m = spy(postmark.Message("from", "to"))
+        p._send_request(m)
+
+        assert_that_method(m.as_string).was_called()
+        assert_that_method(p.request.add_data).was_called()
+        assert_that_method(opener.open).was_called().with_args(p.request)
 
 
 class MessageTest(unittest.TestCase):
@@ -14,18 +33,21 @@ class MessageTest(unittest.TestCase):
         sender = "Sender addr"
         to = "To addr"
         msg = postmark.Message(sender, to)
+        self.assertEqual(sender, msg.sender)
         self.assertIn(sender, msg.as_string())
 
     def test_to(self):
         sender = "Sender addr"
         to = "To addr"
         msg = postmark.Message(sender, to)
+        self.assertEqual(to, msg.to)
         self.assertIn(to, msg.as_string())
 
     def test_to_as_list(self):
         sender = "Sender addr"
         to = ["to1", "to2"]
         msg = postmark.Message(sender, to)
+        self.assertEqual(to, msg.to)
         self.assertIn(",".join(to), msg.as_string())
 
     def test_cc(self):
@@ -33,6 +55,7 @@ class MessageTest(unittest.TestCase):
         to = "To addr"
         cc = "CC addr"
         msg = postmark.Message(sender, to, cc=cc)
+        self.assertEqual(cc, msg.cc)
         self.assertIn(cc, msg.as_string())
 
     def test_cc_as_list(self):
@@ -40,55 +63,63 @@ class MessageTest(unittest.TestCase):
         to = ["to1", "to2"]
         cc = ["cc1", "cc2"]
         msg = postmark.Message(sender, to, cc=cc)
+        self.assertEqual(cc, msg.cc)
         self.assertIn(",".join(cc), msg.as_string())
 
     def test_bcc(self):
         sender = "Sender addr"
         to = "To addr"
-        bcc = "CC addr"
+        bcc = "Bcc addr"
         msg = postmark.Message(sender, to, bcc=bcc)
+        self.assertEqual(bcc, msg.bcc)
         self.assertIn(bcc, msg.as_string())
 
     def test_bcc_as_list(self):
         sender = "Sender addr"
         to = ["to1", "to2"]
-        bcc = ["cc1", "cc2"]
+        bcc = ["bcc1", "bcc2"]
         msg = postmark.Message(sender, to, bcc=bcc)
+        self.assertEqual(bcc, msg.bcc)
         self.assertIn(",".join(bcc), msg.as_string())
 
     def test_subject(self):
         sender = "Sender addr"
         to = "To addr"
-        subject = "CC addr"
+        subject = "Subject"
         msg = postmark.Message(sender, to, subject=subject)
+        self.assertEqual(subject, msg.subject)
         self.assertIn(subject, msg.as_string())
 
     def test_tag(self):
         sender = "Sender addr"
         to = "To addr"
-        tag = "CC addr"
+        tag = "Tag"
         msg = postmark.Message(sender, to, tag=tag)
+        self.assertEqual(tag, msg.tag)
         self.assertIn(tag, msg.as_string())
 
     def test_html(self):
         sender = "Sender addr"
         to = "To addr"
-        html = "CC addr"
+        html = "<p>Html</p>"
         msg = postmark.Message(sender, to, html=html)
+        self.assertEqual(html, msg.html)
         self.assertIn(html, msg.as_string())
 
     def test_text(self):
         sender = "Sender addr"
         to = "To addr"
-        text = "CC addr"
+        text = "Text"
         msg = postmark.Message(sender, to, text=text)
+        self.assertEqual(text, msg.text)
         self.assertIn(text, msg.as_string())
 
     def test_reply_to(self):
         sender = "Sender addr"
         to = "To addr"
-        reply_to = "CC addr"
+        reply_to = "Reply to"
         msg = postmark.Message(sender, to, reply_to=reply_to)
+        self.assertEqual(reply_to, msg.reply_to)
         self.assertIn(reply_to, msg.as_string())
 
     def test_add_header(self):
@@ -101,6 +132,7 @@ class MessageTest(unittest.TestCase):
         msg = msg.as_string()
         self.assertIn('"Name": "%s"' % name, msg)
         self.assertIn('"Value": "%s"' % value, msg)
+
 
 class MessageAttachmentTest(unittest.TestCase):
     def setUp(self):
