@@ -6,6 +6,7 @@ Simple Postmark API client
 
 Replace `SENDER`, `RECIPIENT` and `API KEY` with the values that fits you, then just run the script, you'll see the output in the terminal
 
+```python
     import sys
     import logging
 
@@ -23,5 +24,4 @@ Replace `SENDER`, `RECIPIENT` and `API KEY` with the values that fits you, then 
 
         client = postmark.Postmark(api_key="API KEY")
         client.sendmail(msg)
-
-
+```
