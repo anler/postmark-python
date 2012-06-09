@@ -27,9 +27,9 @@ class Postmark(object):
             "Content-type": "application/json",
             "X-Postmark-Server-Token": api_key
         }
-        if not request_factory:
+        if request_factory is None:
             request_factory = urllib2.Request
-        if not url_opener:
+        if url_opener is None:
             if request_handlers:
                 url_opener = urllib2.build_opener(request_handlers)
             else:
